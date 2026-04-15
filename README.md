@@ -495,6 +495,12 @@ A few sentences about what you learned:
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
 
+### Reflection
+
+Building this recommender system helped me understand how simple rules and weighted features can turn user preferences into ranked results. I was surprised that small changes in weights, especially for mood, could significantly change the ranking, showing how sensitive recommendation systems can be.
+
+This project also changed how I think about real-world recommenders. Even with a small dataset, biases and limitations appear, such as favoring high-energy songs or struggling with conflicting preferences. It showed me that human judgment is still important, especially when designing features and evaluating whether the recommendations actually make sense to users.
+
 ## CLI Verification
 
 ![CLI Output](images/cli-output.png)
