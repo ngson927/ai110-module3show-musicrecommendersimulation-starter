@@ -504,3 +504,18 @@ A few sentences about what you learned:
 ## CLI Verification
 
 ![CLI Output](images/cli-output.png)
+
+
+## Stress Test with Diverse Profiles
+
+### High-Energy Pop
+![High-Energy Pop](images/high-energy-pop.png)
+
+### Chill Lofi
+![Chill Lofi](images/chill-lofi.png)
+
+### Deep Intense Rock
+![Deep Intense Rock](images/intense-rock.png)
+
+### Conflicting Profile
+![Conflicting Profile](images/conflicting.png)
