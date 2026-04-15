@@ -49,11 +49,25 @@ With 3.5 out of 10 maximum points, energy is 35% of the total score. When a user
 
 ## 7. Evaluation
 
-Seven user profiles were tested: three standard (pop/happy, lofi/focused, rock/intense) and four adversarial edge cases (sad+high energy, missing genre, perfectly neutral midpoint, acoustic+max energy). For each profile the top 5 results were reviewed against musical intuition.
+Seven user profiles were tested: three standard (pop/happy, lofi/focused, rock/intense) and four adversarial edge cases (sad+high energy, missing genre, perfectly neutral, acoustic+max energy). For each profile the top 5 results were reviewed against musical intuition, and a cross-profile frequency count was run to surface catalog-level biases.
 
-Six of seven #1 results felt musically correct. The one failure was the acoustic+max-energy conflict, which is an inherently unsatisfiable request in an 18-song catalog. A cross-profile frequency count revealed Gym Hero appearing in 5 of 7 top-5 lists and Drop Zone in 4 of 7 — both due to near-zero acousticness, not genuine musical fit.
+**Profile results at a glance:**
 
-A weight sensitivity experiment tested two modifications: doubling energy weight and removing mood entirely. Doubling energy produced no rank changes (proportional inflation). Removing mood caused one rank swap in the pop profile (Gym Hero overtook Rooftop Lights for #2), confirming mood is the most structurally important weight — the one that most influences relative ordering between similar songs.
+| Profile | Top result | Correct? | Key observation |
+|---|---|---|---|
+| High-Energy Pop | Sunrise City (9.69/10) | Yes | All 5 rules matched — unambiguous winner |
+| Chill Lofi Study | Focus Flow (9.76/10) | Yes | Jazz and folk surfaced at #4–5 via acousticness despite genre miss |
+| Deep Intense Rock | Storm Runner (9.74/10) | Yes | Genre + mood + energy all aligned |
+| Sad + High Energy | Lost in Translation (8.78/10) | Yes | Emotional fit (genre+mood+valence = 5.38 pts) beat the energy mismatch |
+| Missing Genre (k-pop) | Rooftop Lights (8.09/10) | Yes | Graceful degradation — sensible results, just lower ceiling |
+| Perfectly Neutral | Spacewalk Thoughts (8.08/10) | Yes | Categorical matches acted as tiebreakers when proximity scores converged |
+| Acoustic + Max Energy | Drop Zone (7.41/10) | **No** | Energy (3.5) + mood (2.5) overwhelmed acoustic preference — EDM beat folk |
+
+**What surprised me:**
+
+The cross-profile frequency count was the most revealing test. Gym Hero appeared in 5 of 7 top-5 lists — not because it was musically relevant, but because its near-zero acousticness (0.05) automatically earned 0.95 texture points from every non-acoustic user. The system was being gamed by a catalog gap, not a weight problem. Doubling the energy weight changed nothing (proportional inflation), but removing mood caused one rank swap — confirming mood is the weight that actually controls ordering between similar songs.
+
+A weight sensitivity experiment confirmed the baseline is stable: doubling energy weight produced no rank changes, while removing mood caused one rank swap (Gym Hero overtook Rooftop Lights for #2 in the pop profile), proving mood is the most structurally important weight.
 
 ---
 
