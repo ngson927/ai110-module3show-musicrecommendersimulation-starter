@@ -371,4 +371,4 @@ A few sentences about what you learned:
 
 ## CLI Verification
 
-![CLI Output] (images/cli-output.png)
+![CLI Output](images/cli-output.png)
