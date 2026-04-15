@@ -344,17 +344,41 @@ Seven profiles were run — three standard and four adversarial edge cases — t
 
 ---
 
+### Weight Sensitivity Experiment
+
+Two configurations were tested against the Baseline on two profiles — High-Energy Pop and the Sad+High Energy edge case.
+
+**Experiment A — Double Energy (3.5 → 7.0), Halve Genre (1.5 → 0.75)**
+
+| Profile | Baseline #1–3 | Exp A #1–3 | Changed? |
+|---|---|---|---|
+| High-Energy Pop | Sunrise City, Rooftop Lights, Gym Hero | Sunrise City, Rooftop Lights, Gym Hero | **No** — same order |
+| Sad + High Energy | Lost in Translation, Iron Surge, Storm Runner | Lost in Translation, Iron Surge, Storm Runner | **No** — same order |
+
+Finding: doubling energy did not change ranking order — it only inflated raw scores. The relative distance between songs stayed proportional. Genre halving had no visible effect because genre is binary: songs that matched genre still matched, songs that didn't still scored zero.
+
+**Experiment B — Mood Removed (2.5 → 0.0)**
+
+| Profile | Baseline #1–3 | Exp B #1–3 | Changed? |
+|---|---|---|---|
+| High-Energy Pop | Sunrise City, **Rooftop Lights**, Gym Hero | Sunrise City, **Gym Hero**, Groove Station | **Yes** — #2 and #4 swap |
+| Sad + High Energy | Lost in Translation, Iron Surge, Storm Runner | Lost in Translation, Iron Surge, Storm Runner | **No** — order held |
+
+Finding: removing mood caused Gym Hero (pop/intense) to overtake Rooftop Lights (indie pop/happy) for #2 in the pop profile — because Rooftop Lights had been earning its #2 position partly on a mood match that Gym Hero lacked. Without mood, energy + genre proximity decided the tie and Gym Hero's pop genre match won. The sad profile's ranking held because its top result (Lost in Translation) already dominated through genre + valence proximity, not just mood.
+
+**Overall conclusion:** The baseline weights are stable — doubling energy or removing genre does not flip the top results. Mood is the most sensitive weight: removing it causes rank swaps between songs with similar energy but different moods, which is exactly the behavior the design intended to prevent.
+
+---
+
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+- Catalog of 18 songs is too small — Gym Hero and Drop Zone appear in 5/7 and 4/7 top-5 lists respectively due to near-zero acousticness, not genuine relevance
+- Structurally conflicting preferences (acoustic + max energy) cannot be satisfied — energy weight always dominates
+- Genre matching is binary string equality — `lofi` and `ambient` score identically to a complete mismatch even though they feel nearly identical
+- No catalog diversity enforcement — top-5 results can cluster around the same artist or sound texture
+- Mood and genre labels are manually assigned and inconsistent at scale
 
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+---
 
 ---
 
