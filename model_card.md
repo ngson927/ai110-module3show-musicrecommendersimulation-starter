@@ -1,88 +1,129 @@
-# 🎧 Model Card: Music Recommender Simulation
+# 🎧 Model Card: VibeFinder 1.0
+
+---
 
 ## 1. Model Name
 
-**VibeFinder 1.0**
+**VibeFinder 1.0** — a content-based music recommender simulation built for classroom exploration.
 
 ---
 
-## 2. Intended Use
+## 2. Goal / Task
 
-VibeFinder 1.0 suggests up to 5 songs from an 18-song catalog based on a user's stated genre preference, mood, target energy level, emotional tone (valence), and acoustic texture preference. It is designed for classroom exploration of content-based filtering concepts — not for real users or production deployment. The system assumes users can accurately describe their preferences upfront (genre, mood, energy) and that those preferences remain constant throughout a session. It makes no attempt to learn from listening behavior.
+VibeFinder tries to answer one question: *given what a user says they like, which songs in the catalog are the best match right now?*
 
----
-
-## 3. How the Model Works
-
-Each song in the catalog is given a score from 0 to 10 by comparing five of its features against the user's stated preferences. Songs that are energetically closest to what the user wants earn the most points (up to 3.5). A mood match awards a fixed 2.5 points — the system treats a wrong mood as a hard mismatch. Emotional tone (valence) and genre each contribute up to 1.5 points, and acoustic texture adds up to 1 point. All 18 songs are scored independently, then sorted from highest to lowest. The top 5 are returned along with a plain-language explanation of exactly which features earned points and how many.
-
-The key design choice is that mood outweighs genre: a jazz song in the right mood is preferred over a pop song in the wrong mood. Energy uses a proximity formula — the closer a song's intensity is to the user's target, the more points it earns — so the system rewards "closest match," not "loudest song."
+It does this by comparing five features of every song against the user's stated preferences and giving each song a score from 0 to 10. The songs with the highest scores are recommended. It does not predict what a user will click on, does not learn from behavior, and does not use data from other users. It just scores and ranks.
 
 ---
 
-## 4. Data
+## 3. Data Used
 
-The catalog contains 18 songs across 15 genres and 14 moods, stored in `data/songs.csv`. The original 10-song starter set was expanded with 8 additional songs to cover genres absent from the original (hip-hop, r&b, classical, metal, folk, edm, country, funk) and moods absent from the original (sad, romantic, peaceful, angry, nostalgic, energized, melancholic, playful).
+- **Catalog size:** 18 songs in `data/songs.csv`
+- **Features per song:** genre, mood, energy (0–1), tempo (BPM), valence (0–1), danceability (0–1), acousticness (0–1)
+- **Genres covered:** pop, lofi, rock, ambient, jazz, synthwave, indie pop, hip-hop, r&b, classical, metal, folk, edm, country, funk (15 total)
+- **Moods covered:** happy, chill, intense, relaxed, focused, moody, sad, romantic, peaceful, angry, nostalgic, energized, melancholic, playful (14 total)
 
-Despite this expansion, the catalog is heavily skewed: lofi has 3 songs, pop has 2, and every other genre has exactly 1. Eleven of 14 moods are represented by a single song each. The energy distribution leans toward high-energy content (8 of 18 songs have energy above 0.70). The dataset reflects a Western popular music bias — no African, Latin, or South Asian genres are present — and was constructed synthetically, meaning song feature values were assigned by hand rather than measured from real audio.
-
----
-
-## 5. Strengths
-
-The system works well when the user's preferences align with a song that has matching genre, mood, and energy simultaneously — in these cases the top result is unambiguous (scores of 9.5–9.8/10) and consistent with musical intuition. The proximity-based energy scoring correctly surfaces songs that are "close enough" rather than just the loudest, which means a user wanting moderate energy does not always get extreme results. The explanation output (e.g., "mood match (+2.50), energy proximity (+3.43)") makes every recommendation fully traceable — there are no black-box decisions. The weight sensitivity experiment confirmed the baseline weights are stable: doubling energy or removing genre did not change the top-ranked song in any tested profile.
-
----
-
-## 6. Limitations and Bias
-
-**Primary weakness: mood singularity creates a two-tier catalog.**
-Eleven of 14 moods in the catalog have exactly one song. This means any user whose favorite mood is `sad`, `romantic`, `peaceful`, `angry`, `nostalgic`, `energized`, `melancholic`, or `playful` can earn the 2.5-point mood bonus from at most one song in the entire catalog — and zero songs if that single match also fails on energy. Users preferring `chill`, `happy`, or `intense` have two or three mood-matching options, giving them a structural scoring advantage. In practice, this means the system is not equally useful across all mood preferences: a user who wants `romantic` music will almost always receive four recommendations that don't match their mood at all, regardless of how good their other preferences are specified.
-
-**Secondary weakness: acousticness gap amplifies electronic songs.**
-Three songs — Gym Hero (0.05), Iron Surge (0.04), and Drop Zone (0.03) — have near-zero acousticness. For every non-acoustic user (6 of 7 tested profiles), these songs automatically earn 0.95–0.97 acousticness points regardless of whether they match any other preference. This causes them to appear in the top 5 across wildly different user profiles: Gym Hero appeared in 5 of 7 tested top-5 lists, not because it was genuinely relevant but because no song in the mid-range acousticness zone (0.3–0.7) exists to compete.
-
-**Tertiary weakness: energy weight dominates conflicting preferences.**
-With 3.5 out of 10 maximum points, energy is 35% of the total score. When a user has preferences that are structurally incompatible in the catalog (e.g., high energy AND acoustic texture), energy always wins. The acoustic + max-energy edge case placed the electronic Drop Zone at #1 over the folk Porch Swing Days — the song the user most likely wanted — because energy + mood together (6.0 pts) overwhelmed the acoustic preference entirely.
+**Known limits of the data:**
+- The catalog is tiny. 11 of 14 moods have only one song. This means most users will only get one mood match in the entire top 5.
+- Feature values (energy, valence, etc.) were assigned by hand, not measured from real audio. They may not reflect how these songs would actually be analyzed by a tool like Spotify.
+- Only Western music genres are represented. No African, Latin, K-pop, Bollywood, or regional genres are in the catalog.
+- 8 of 18 songs are high-energy (above 0.70). Low-energy users have fewer good matches available.
 
 ---
 
-## 7. Evaluation
+## 4. Algorithm Summary
 
-Seven user profiles were tested: three standard (pop/happy, lofi/focused, rock/intense) and four adversarial edge cases (sad+high energy, missing genre, perfectly neutral, acoustic+max energy). For each profile the top 5 results were reviewed against musical intuition, and a cross-profile frequency count was run to surface catalog-level biases.
+The system scores each song using five rules, then returns the top results in order.
 
-**Profile results at a glance:**
+**Rule 1 — Energy (up to 3.5 points)**
+The system checks how close a song's energy level is to what the user asked for. A song at exactly the right energy gets 3.5 points. A song at the opposite extreme gets 0. This rewards "closest match" — not just the loudest or the most energetic song.
 
-| Profile | Top result | Correct? | Key observation |
-|---|---|---|---|
-| High-Energy Pop | Sunrise City (9.69/10) | Yes | All 5 rules matched — unambiguous winner |
-| Chill Lofi Study | Focus Flow (9.76/10) | Yes | Jazz and folk surfaced at #4–5 via acousticness despite genre miss |
-| Deep Intense Rock | Storm Runner (9.74/10) | Yes | Genre + mood + energy all aligned |
-| Sad + High Energy | Lost in Translation (8.78/10) | Yes | Emotional fit (genre+mood+valence = 5.38 pts) beat the energy mismatch |
-| Missing Genre (k-pop) | Rooftop Lights (8.09/10) | Yes | Graceful degradation — sensible results, just lower ceiling |
-| Perfectly Neutral | Spacewalk Thoughts (8.08/10) | Yes | Categorical matches acted as tiebreakers when proximity scores converged |
-| Acoustic + Max Energy | Drop Zone (7.41/10) | **No** | Energy (3.5) + mood (2.5) overwhelmed acoustic preference — EDM beat folk |
+**Rule 2 — Mood (up to 2.5 points)**
+If the song's mood label matches the user's favorite mood exactly, it gets 2.5 points. If not, it gets zero. There is no partial credit. This is intentional — a wrong mood is a hard mismatch that most listeners would skip.
 
-**What surprised me:**
+**Rule 3 — Valence (up to 1.5 points)**
+Valence measures whether a song sounds happy/bright or dark/melancholic. The system rewards songs whose emotional tone is closest to the user's target. This rule helps separate songs that have the same energy but feel completely different — for example, an intense-but-triumphant track vs. an intense-but-dark one.
 
-The cross-profile frequency count was the most revealing test. Gym Hero appeared in 5 of 7 top-5 lists — not because it was musically relevant, but because its near-zero acousticness (0.05) automatically earned 0.95 texture points from every non-acoustic user. The system was being gamed by a catalog gap, not a weight problem. Doubling the energy weight changed nothing (proportional inflation), but removing mood caused one rank swap — confirming mood is the weight that actually controls ordering between similar songs.
+**Rule 4 — Genre (up to 1.5 points)**
+If the song's genre matches the user's preferred genre exactly, it gets 1.5 points. Otherwise zero. Genre is weighted below mood because users are more likely to tolerate an unexpected genre than an unexpected vibe.
 
-A weight sensitivity experiment confirmed the baseline is stable: doubling energy weight produced no rank changes, while removing mood caused one rank swap (Gym Hero overtook Rooftop Lights for #2 in the pop profile), proving mood is the most structurally important weight.
+**Rule 5 — Acoustic texture (up to 1.0 point)**
+The system checks whether a song is organic/warm (acoustic) or electronic/produced. If the user prefers acoustic, songs with higher acousticness score higher. If the user prefers electronic, songs with lower acousticness score higher. This separates a warm jazz piano from a synthesized EDM drop even if they have similar energy.
 
----
-
-## 8. Future Work
-
-- **Expand mood coverage**: Add 2–3 songs per mood so every mood preference has at least a few candidates. The current single-song moods make the mood weight nearly useless for most users.
-- **Fill the acousticness gap**: Add 4–6 songs with mid-range acousticness (0.3–0.6) to break the electronic floor bias that inflates Gym Hero and Drop Zone.
-- **Soft genre matching**: Replace binary genre equality with a similarity lookup (e.g., `lofi` ≈ `ambient` ≈ `jazz` for calm, acoustic users) so genre misses don't always score zero.
-- **Diversity constraint in ranking**: After scoring, enforce that no more than 2 songs from the same artist or genre appear in the top 5, so the output feels varied.
-- **Context-aware profiles**: Allow a user to specify a context (studying, working out, commuting) that automatically adjusts weights — e.g., energy weight rises for workout context, valence weight rises for mood-sensitive contexts.
+**Final score = sum of all five rules. Maximum = 10.0 points. Sorted highest to lowest. Top 5 returned.**
 
 ---
 
-## 9. Personal Reflection
+## 5. Observed Behavior / Biases
 
-Building this simulation made the mechanics of content-based filtering concrete in a way that reading about it does not. The scoring recipe looks simple on paper, but running adversarial profiles revealed that small catalog imbalances — a handful of songs with extreme acousticness values, eleven moods with only one representative each — can quietly dominate the output in ways that would be invisible without systematic testing. The most surprising discovery was that doubling the energy weight changed nothing: when I expected the rankings to shift dramatically, they stayed identical, which showed that relative distances between songs matter more than absolute weight values.
+**What works well:**
+When a user's preferences line up with a song that hits all five rules, the result is unambiguous — scores of 9.5–9.8 out of 10, and the recommendation matches intuition immediately. The mood-over-genre weight decision proved correct: in testing, a happy indie pop song correctly ranked above an intense pop song for a happy user, because the mood match (2.5 pts) outweighed the genre match (1.5 pts). Every recommendation comes with a plain-language explanation, so there are no hidden or unexplainable results.
 
-This changed how I think about Spotify's Discover Weekly. What feels like the app "knowing" your taste is really a much larger version of the same scoring loop — but with millions of songs diluting the catalog biases, behavioral data (skips, replays) replacing static profiles, and collaborative signals from users with similar taste filling in the gaps that pure content-matching misses. The filter bubble problem I observed here — users of rare moods getting worse recommendations — is a real and documented issue in production recommender systems, typically addressed by deliberately injecting diverse or serendipitous results into the ranking.
+**Bias 1 — Mood singularity (the most impactful)**
+Eleven of 14 moods have exactly one song. A user who wants `romantic`, `nostalgic`, `angry`, or `peaceful` music can earn the 2.5-point mood bonus from at most one song in the entire catalog. Users who want `chill`, `happy`, or `intense` have two or three mood-matching songs — a structural advantage that has nothing to do with the weights. This makes the system unequally useful: a romantic music user will always receive four recommendations that don't match their mood no matter what.
+
+**Bias 2 — Acousticness floor exploit (the most surprising)**
+Three songs — Gym Hero (0.05), Iron Surge (0.04), and Drop Zone (0.03) — are extremely electronic. For every user who says "I don't want acoustic music," those songs automatically earn 0.95–0.97 texture points just for being electronic, with no requirement to match mood, genre, or energy. Gym Hero appeared in 5 out of 7 tested top-5 lists not because it was a good fit, but because the catalog has no mid-range acoustic songs (0.3–0.7) to compete with it. The fix is more songs in that range, not different weights.
+
+**Bias 3 — Energy dominates incompatible preferences**
+Energy is worth 3.5 out of 10 points — 35% of the total. When two preferences conflict (like wanting high energy AND acoustic texture), energy always wins. In testing, an EDM track ranked #1 for a user who explicitly asked for acoustic folk music, simply because the EDM song's energy and mood matched better than any acoustic song could. This is a real flaw: the system cannot gracefully handle preferences that are structurally impossible to satisfy together in a small catalog.
+
+---
+
+## 6. Evaluation Process
+
+Seven user profiles were tested: three standard profiles and four adversarial edge cases designed to expose weaknesses.
+
+**Standard profiles tested:**
+- *High-Energy Pop* (genre: pop, mood: happy, energy: 0.80) — baseline happy listener
+- *Chill Lofi Study* (genre: lofi, mood: focused, energy: 0.40, acoustic: yes) — low-energy background music
+- *Deep Intense Rock* (genre: rock, mood: intense, energy: 0.92) — workout listener
+
+**Adversarial profiles tested:**
+- *Sad + High Energy* — conflicting preferences (sad mood but high energy target)
+- *Missing Genre (k-pop)* — favorite genre not in catalog
+- *Perfectly Neutral* — all numeric targets at the midpoint (0.5)
+- *Acoustic + Max Energy* — two preferences that cannot both be satisfied
+
+**Results summary:**
+
+| Profile | Top result | Felt right? |
+|---|---|---|
+| High-Energy Pop | Sunrise City (9.69/10) | Yes |
+| Chill Lofi Study | Focus Flow (9.76/10) | Yes |
+| Deep Intense Rock | Storm Runner (9.74/10) | Yes |
+| Sad + High Energy | Lost in Translation (8.78/10) | Yes — emotional fit won over energy |
+| Missing Genre | Rooftop Lights (8.09/10) | Yes — graceful degradation |
+| Perfectly Neutral | Spacewalk Thoughts (8.08/10) | Yes — categorical rules broke the tie |
+| Acoustic + Max Energy | Drop Zone (7.41/10) | **No** — EDM beat folk |
+
+A weight sensitivity experiment was also run. Doubling the energy weight produced no rank changes — it only inflated scores proportionally. Removing the mood weight caused one rank swap (Gym Hero overtook Rooftop Lights for second place in the pop profile), which confirmed that mood is the most structurally important weight in the recipe.
+
+---
+
+## 7. Intended Use and Non-Intended Use
+
+**Intended use:**
+- Classroom demonstration of how content-based filtering works
+- Learning how weighted scoring, proximity formulas, and categorical matching combine to produce ranked results
+- Exploring how small changes to weights or catalog composition change recommendations
+- Understanding what "bias" means in a recommendation system through hands-on experimentation
+
+**Not intended for:**
+- Real music discovery for actual users — the catalog is too small and the feature values are synthetic
+- Any deployment in a product or app — there is no personalization, no behavioral learning, and no diversity enforcement
+- Representing any real user population — the catalog reflects one person's genre choices and hand-assigned values
+- Making decisions about music preferences at scale — a system with 18 songs and 14 mood labels is not a substitute for systems trained on millions of tracks with measured audio features
+
+---
+
+## 8. Ideas for Improvement
+
+**1. Add 2–3 songs per mood**
+Right now 11 moods have only one song. A user who wants "romantic" music gets one mood match in the entire catalog. Adding more songs per mood would make the mood weight actually useful for most users, not just the ones who happen to want chill, happy, or intense music.
+
+**2. Add songs with mid-range acousticness**
+Only 2 of 18 songs have acousticness between 0.3 and 0.7. This gap means extremely electronic songs (Gym Hero, Drop Zone, Iron Surge) dominate the texture scoring for all non-acoustic users. Adding 4–6 songs with medium texture would break this exploit and make acousticness a more meaningful differentiator.
+
+**3. Soft genre matching**
+Right now genre is binary — lofi and ambient score the same as lofi and heavy metal on the genre rule (both get zero). In reality, lofi and ambient are nearly the same vibe. A similarity table (e.g., lofi ≈ ambient ≈ jazz for calm texture) would let the genre rule do more nuanced work without a complete overhaul of the scoring logic.
