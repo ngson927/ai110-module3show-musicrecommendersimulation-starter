@@ -514,8 +514,6 @@ A few sentences about what you learned:
 ### Chill Lofi
 ![Chill Lofi](images/chill-lofi.png)
 
-### Deep Intense Rock
-![Deep Intense Rock](images/intense-rock.png)
+![Deep Intense Rock](images/deep-intense-rock.png)
 
-### Conflicting Profile
-![Conflicting Profile](images/conflicting.png)
+![Conflicting Profile](images/conflicting-profile.png)
