@@ -228,11 +228,119 @@ Loaded songs: 18
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+Seven profiles were run — three standard and four adversarial edge cases — to stress-test the scoring logic.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+---
+
+### Profile 1 — High-Energy Pop (Standard)
+
+```
+  Genre: pop | Mood: happy | Energy: 0.80 | Valence: 0.80 | Acoustic: no
+
+  #1  Sunrise City         9.69   all 5 rules match
+  #2  Rooftop Lights       7.99   mood match, no genre pts (indie pop ≠ pop)
+  #3  Gym Hero             6.95   genre match, no mood pts (intense ≠ happy)
+  #4  Groove Station       5.53   energy only — no categorical match
+  #5  Drop Zone            5.18   energy only — no categorical match
+```
+
+**Observation:** Rooftop Lights (indie pop) beats Gym Hero (pop) because mood (2.5 pts) outweighs genre (1.5 pts). The weight design worked as intended.
+
+---
+
+### Profile 2 — Chill Lofi Study (Standard)
+
+```
+  Genre: lofi | Mood: focused | Energy: 0.40 | Valence: 0.60 | Acoustic: yes
+
+  #1  Focus Flow           9.76   all 5 rules match — perfect score
+  #2  Library Rain         7.18   lofi genre match, no mood pts (chill ≠ focused)
+  #3  Midnight Coding      7.08   lofi genre match, no mood pts (chill ≠ focused)
+  #4  Coffee Shop Stories  5.62   jazz sneaks in — acoustic + energy proximity
+  #5  Porch Swing Days     5.54   folk sneaks in — acoustic + energy proximity
+```
+
+**Observation:** The system correctly surfaces jazz and folk at #4–5 through acousticness even though genre doesn't match. The acoustic texture signal does useful cross-genre work.
+
+---
+
+### Profile 3 — Deep Intense Rock (Standard)
+
+```
+  Genre: rock | Mood: intense | Energy: 0.92 | Valence: 0.40 | Acoustic: no
+
+  #1  Storm Runner         9.74   all 5 rules match
+  #2  Gym Hero             7.86   mood match (intense), genre miss (pop)
+  #3  Drop Zone            5.54   energy proximity only
+  #4  Iron Surge           5.52   energy proximity only — nearly tied with Drop Zone
+  #5  Night Drive Loop     5.04   energy proximity only
+```
+
+**Observation:** Iron Surge (metal/angry) and Drop Zone (edm/energized) nearly tie at #3–4 despite different genres and moods — both score similarly on energy and valence proximity alone.
+
+---
+
+### Profile 4 — EDGE: Sad but High Energy
+
+```
+  Genre: hip-hop | Mood: sad | Energy: 0.92 | Valence: 0.20 | Acoustic: no
+
+  #1  Lost in Translation  8.78   genre + mood match, energy penalty (-0.95 pts vs max)
+  #2  Iron Surge           5.76   energy match, wrong mood, low valence proximity
+  #3  Storm Runner         5.44   energy match, wrong mood
+  #4  Drop Zone            5.24   energy match, wrong mood
+  #5  Gym Hero             5.05   energy match, wrong mood
+```
+
+**Observation:** Lost in Translation wins despite a significant energy mismatch (0.65 actual vs 0.92 target) because genre + mood + valence together (5.38 pts) outweigh the energy gap. The system correctly prioritized emotional fit over raw intensity. #2–5 are a cluster of high-energy songs the user would likely skip.
+
+---
+
+### Profile 5 — EDGE: Genre Not in Catalog (k-pop)
+
+```
+  Genre: k-pop | Mood: happy | Energy: 0.75 | Valence: 0.80 | Acoustic: no
+
+  #1  Rooftop Lights       8.09   mood + energy + valence — no genre pts available
+  #2  Sunrise City         8.02   mood + energy + valence — nearly tied with #1
+  #3  Groove Station       5.50   energy only
+  #4  Night Drive Loop     5.31   energy only
+  #5  Gym Hero             5.28   energy only — nearly tied with #4
+```
+
+**Observation:** The system degrades gracefully — it still returns sensible happy, upbeat songs even though no song can ever earn the 1.5 genre points. The missing genre ceiling compresses scores into a tighter range (8.09 vs 9.69 for the pop profile) but doesn't break ranking order.
+
+---
+
+### Profile 6 — EDGE: Perfectly Neutral (midpoint targets)
+
+```
+  Genre: ambient | Mood: chill | Energy: 0.50 | Valence: 0.50 | Acoustic: no
+
+  #1  Spacewalk Thoughts   8.08   genre + mood match rescue a middling energy score
+  #2  Midnight Coding      7.42   mood match (chill), no genre pts
+  #3  Library Rain         6.97   mood match (chill), no genre pts
+  #4  Velvet Nights        5.10   no categorical match — energy proximity only
+  #5  Lost in Translation  5.00   no categorical match — nearly tied with #4
+```
+
+**Observation:** Categorical matches (mood, genre) dominate when numerical features are near-neutral — they act as tiebreakers when energy/valence proximity scores converge. The spread between #1 (8.08) and #5 (5.00) is meaningful, not a near-tie.
+
+---
+
+### Profile 7 — EDGE: Acoustic but Max Energy
+
+```
+  Genre: folk | Mood: energized | Energy: 0.95 | Valence: 0.70 | Acoustic: yes
+
+  #1  Drop Zone            7.41   mood match + energy match, acoustic penalty (0.03)
+  #2  Porch Swing Days     5.21   genre match + high acoustic, severe energy penalty
+  #3  Gym Hero             4.88   energy match, near-zero acoustic score
+  #4  Storm Runner         4.63   energy match, near-zero acoustic score
+  #5  Sunrise City         4.51   energy match, near-zero acoustic score
+```
+
+**Observation:** This is the most revealing edge case. Drop Zone wins despite being the opposite of acoustic (0.03) because energy (3.5 pts) + mood match (2.5 pts) = 6.0 pts overwhelms the acoustic penalty. Porch Swing Days lands at #2 with only 5.21 — the folk acoustic song the user probably *wanted* but the scoring recipe couldn't prioritize. This exposes a real limitation: when two preferences are structurally incompatible in the catalog, energy weight dominates.
 
 ---
 
