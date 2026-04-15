@@ -127,3 +127,37 @@ Only 2 of 18 songs have acousticness between 0.3 and 0.7. This gap means extreme
 
 **3. Soft genre matching**
 Right now genre is binary — lofi and ambient score the same as lofi and heavy metal on the genre rule (both get zero). In reality, lofi and ambient are nearly the same vibe. A similarity table (e.g., lofi ≈ ambient ≈ jazz for calm texture) would let the genre rule do more nuanced work without a complete overhaul of the scoring logic.
+
+---
+
+## 9. Personal Reflection
+
+### Biggest learning moment
+
+The biggest learning moment came from the weight sensitivity experiment — specifically from what *didn't* happen. I expected that doubling the energy weight from 3.5 to 7.0 would visibly shake up the rankings. It changed nothing. Every song that was #1 stayed #1, every #2 stayed #2. That forced me to understand something that isn't obvious from reading about recommender systems: weights control *how much* a feature matters in close contests, but when one song already outscores everything else across multiple features simultaneously, no single weight adjustment can change who wins. The math is stable by design. What actually moves rankings is removing a feature entirely — which is what happened when I set mood to zero and watched Gym Hero jump over Rooftop Lights. That showed me that the *presence or absence* of a signal is often more powerful than how heavily you weight it.
+
+### How AI tools helped — and when I had to double-check
+
+AI tools were genuinely useful for three things in this project: generating the initial algorithm recipe structure, explaining the difference between `.sort()` and `sorted()` when I asked about it, and suggesting the adversarial edge-case profiles (the "missing genre" and "conflicting preferences" ideas both came from prompting for edge cases). Those contributions saved real time and pointed me toward things I might have missed.
+
+Where I had to slow down and verify: the AI's first instinct on weight design was to give genre more points than mood (the starter recipe suggested `+2.0 for genre, +1.0 for mood`). That felt wrong based on how I actually experience music — a wrong mood is more jarring than a wrong genre — so I questioned it, thought it through, and reversed the weights. The AI was generating a plausible-sounding recipe, not reasoning from lived experience. The experiment with the "intense rock user getting a chill lofi song" confirmed my intuition was right. This was a useful reminder: AI tools reflect patterns in training data, not personal judgment. The judgment still has to come from the person building the system.
+
+### What surprised me about simple algorithms "feeling" like recommendations
+
+The most surprising thing was how much the *explanation output* changed the experience of getting a recommendation. When the terminal just prints a song title, it feels arbitrary. When it prints:
+
+```
+Sunrise City — Score: 9.69
+Why: energy proximity (+3.43), mood match (+2.50), valence proximity (+1.44),
+     genre match (+1.50), acousticness match (+0.82)
+```
+
+...it suddenly feels like the system *understood* the request. The math underneath is five multiplications and two equality checks — nothing sophisticated — but seeing the reasoning spelled out makes it feel reasoned. That is exactly what Spotify's "Because you listened to..." cards do. They are not showing you a complex neural network's decision. They are showing you a human-readable justification that makes an automated process feel personal. Building the explanation layer made me realize that transparency and perceived intelligence are closely linked in recommender UX — sometimes more so than the actual algorithm quality.
+
+### What I would try next
+
+**Behavioral feedback loop.** The biggest gap between this simulation and a real system is that this one never learns. Every run starts from scratch. Even a minimal version — tracking which top-5 songs the user skips vs. keeps, and nudging weights slightly after each session — would make the system feel alive in a way that static profiles never can.
+
+**Mood detection from context instead of user input.** Asking users to declare their mood upfront is unrealistic. Real systems infer it: time of day, recent listening history, even weather API data. I would experiment with a simple rule-based context layer — if it is after 10pm, automatically lower the energy target and shift valence toward darker values — to see if inferred context produces better results than explicit input.
+
+**Testing against real users.** Every evaluation in this project was me judging whether the output "felt right" based on my own musical taste. That is a sample size of one. Even asking five classmates with different music preferences to run their own profiles and rate the top 5 results would reveal biases in the catalog and weights that I simply cannot see from my own perspective.
